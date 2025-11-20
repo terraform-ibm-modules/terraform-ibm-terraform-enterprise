@@ -23,7 +23,7 @@
         "tfe"
       ],
       "short_description": "Automate Terraform HashiCorp Enterprise deployment with supporting IBM Cloud services.",
-      "long_description": "**This is a working proof of concept. It is not productized or available in any public catalog. Please refrain from using, sharing, or demonstrating it without first discussing it with vincent.burckhardt@ie.ibm.com and ldharrel@us.ibm.com.**\n\nThis solution provides a fully automated, deployment of Terraform Enterprise (TFE) on IBM Cloud. Designed for scalability, security, and ease of use, it provisions all necessary cloud resources—including VPC, Cloud Object Storage, PostgreSQL, and Redis—within a managed and customizable infrastructure.\n\nIdeal for: DevOps teams, cloud architects, and platform engineers looking to streamline Terraform Enterprise setup on IBM Cloud with infrastructure-as-code best practices.",
+      "long_description": "**This is a working proof of concept. It is not productized or available in any public catalog. Please refrain from using, sharing, or demonstrating it without first discussing it with vincent.burckhardt@ie.ibm.com and ldharrel@us.ibm.com.** \n\nLeverage [Terraform IBM Modules](https://github.com/terraform-ibm-modules) to shape and scale your solutions. You can integrate Terraform IBM Modules (TIM) to extend functionality and design a solution tailored to your environment and operations needs. These modules offer reusable, customizable elements that follow IBM Cloud's recommended practices. You can access the [source code and documentation](https://github.com/terraform-ibm-modules/terraform-ibm-terraform-enterprise) and use it to extend your current architecture or create new solutions.\n\nThis solution provides a fully automated, deployment of Terraform Enterprise (TFE) on IBM Cloud. Designed for scalability, security, and ease of use, it provisions all necessary cloud resources—including VPC, Cloud Object Storage, PostgreSQL, and Redis—within a managed and customizable infrastructure.\n\nIdeal for: DevOps teams, cloud architects, and platform engineers looking to streamline Terraform Enterprise setup on IBM Cloud with infrastructure-as-code best practices.",
       "offering_docs_url": "https://github.com/terraform-ibm-modules/terraform-ibm-ocp-terraform-enterprise/blob/main/README.md",
       "offering_icon_url": "https://cdn.worldvectorlogo.com/logos/terraform-enterprise.svg",
       "features": [
@@ -54,6 +54,10 @@
         {
           "title": "Security and Compliance Ready",
           "description": "Includes options for data retention and access tagging."
+        },
+        {
+          "title": "Composable and Extensible Architecture",
+          "description": "This architecture illustrates how Terraform IBM Modules(TIM) can be integrated to deliver a complete solution on IBM Cloud. Each module is a reusable, and validated component for security, compliance, and operational IBM best practices. You can deploy this architecture as-is or configure it as code by leveraging the underlying modules to fit your specific requirements. Explore the [source code and documentation](https://github.com/terraform-ibm-modules/terraform-ibm-terraform-enterprise) to adapt, extend, or create entirely new solutions using these building blocks."
         }
       ],
       "flavors": [
