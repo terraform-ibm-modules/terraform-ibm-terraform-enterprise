@@ -116,6 +116,7 @@ locals {
 
 data "ibm_is_security_groups" "vpc_security_groups" {
   vpc_id = var.existing_cluster_id != null ? module.vpc.id : module.openshift[0].vpc_id
+  depends_on = [module.openshift]
 }
 
 # Kube-<vpc id> Security Group
