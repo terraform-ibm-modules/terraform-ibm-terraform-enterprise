@@ -38,12 +38,17 @@ func TestMain(m *testing.M) {
 	}
 
 	pass := common.GetRandomPasswordWithPrefix()
+	encPass := common.GetRandomPasswordWithPrefix()
 
 	// ADD SENSITIVE VALS TO ENV
 	// not adding to regular vars so not to leak the values
 	setPassEnvErr := os.Setenv("TF_VAR_admin_password", pass)
 	if setPassEnvErr != nil {
 		log.Fatal(setPassEnvErr)
+	}
+	setEncPassEnvErr := os.Setenv("TF_VAR_tfe_encryption_password", encPass)
+	if setEncPassEnvErr != nil {
+		log.Fatal(setEncPassEnvErr)
 	}
 	os.Exit(m.Run())
 }
@@ -125,12 +130,14 @@ func TestRunSelfHostedSchematics(t *testing.T) {
 	})
 
 	password := common.GetRandomPasswordWithPrefix()
+	encryptionPassword := common.GetRandomPasswordWithPrefix()
 
 	options.TerraformVars = []testschematic.TestSchematicTerraformVar{
 		{Name: "prefix", Value: options.Prefix, DataType: "string"},
 		{Name: "ibmcloud_api_key", Value: options.RequiredEnvironmentVars["TF_VAR_ibmcloud_api_key"], DataType: "string", Secure: true},
 		{Name: "add_to_catalog", Value: false, DataType: "bool"},
-		{Name: "admin_password", Value: password, DataType: "string"},
+		{Name: "admin_password", Value: password, DataType: "string", Secure: true},
+		{Name: "tfe_encryption_password", Value: encryptionPassword, DataType: "string", Secure: true},
 		{Name: "tfe_license", Value: "__NULL__", DataType: "string"},
 		{Name: "tfe_license_secret_crn", Value: permanentResources["terraform_enterprise_license_secret_crn"], DataType: "string"},
 	}

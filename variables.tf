@@ -35,6 +35,12 @@ variable "tfe_license" {
   sensitive   = true
 }
 
+variable "tfe_encryption_password" {
+  type        = string
+  description = "The encryption password used by Terraform Enterprise to protect sensitive data at rest. Must be kept secret and consistent across upgrades — changing this value requires a migration procedure."
+  sensitive   = true
+}
+
 variable "tfe_license_secret_crn" {
   type        = string
   description = "The CRN of the Secrets Manager secret containing the license key for Terraform Enterprise"
@@ -78,15 +84,29 @@ variable "admin_password" {
 # renovate: datasource=github-releases depName=hashicorp/terraform-enterprise
 variable "tfe_image_tag" {
   type        = string
-  description = "The version tag of the Terraform Enterprise image to use (e.g., '2.0.4'). See https://developer.hashicorp.com/terraform/enterprise/releases for available versions."
-  default     = "2.0.4"
+  description = "The version tag of the Terraform Enterprise image to use. Check on https://developer.hashicorp.com/terraform/enterprise/releases for available versions."
+  default     = "2.0.5"
+}
+
+variable "tfe_image_repository" {
+  type        = string
+  description = "The container image registry to pull the Terraform Enterprise image from. Defaults to HashiCorp's official registry ('images.releases.hashicorp.com/hashicorp/terraform-enterprise'). For IBM Passport Advantage customers, set to 'cp.icr.io/cp/hashicorp/terraform-enterprise'."
+  default     = "images.releases.hashicorp.com/hashicorp/terraform-enterprise"
+  nullable    = false
+}
+
+variable "tfe_image_pull_secret_username" {
+  type        = string
+  description = "The username used to authenticate with the image registry for the pull secret. For HashiCorp's official registry this is always 'terraform'. For IBM Cloud Container Registry (cp.icr.io) set this to 'iamapikey' and set the image pull password to your IBM Cloud API key."
+  default     = "terraform"
+  nullable    = false
 }
 
 # renovate: datasource=helm depName=terraform-enterprise registryUrl=https://helm.releases.hashicorp.com
 variable "tfe_helm_chart_version" {
   type        = string
-  description = "The version of the Terraform Enterprise Helm chart to use (e.g., '2.0.4'). See https://github.com/hashicorp/terraform-enterprise-helm/blob/main/CHANGELOG.md for available versions."
-  default     = "2.0.4"
+  description = "The version of the Terraform Enterprise Helm chart to use. Default to 2.0.5 . Check on https://github.com/hashicorp/terraform-enterprise-helm/blob/main/CHANGELOG.md for available versions."
+  default     = "2.0.5"
 }
 
 variable "tfe_helm_repository" {
@@ -99,6 +119,18 @@ variable "tfe_namespace" {
   type        = string
   description = "namespace to place Terraform Enterprise in on cluster"
   default     = "tfe"
+
+  validation {
+    condition     = length(var.tfe_namespace) <= 59
+    error_message = "var.tfe_namespace must be 59 characters or fewer. The OCP route hostname is constructed as 'tfe-<namespace>.<ingress-domain>' and DNS labels must not exceed 63 characters."
+  }
+}
+
+variable "tfe_extra_env_vars" {
+  description = "Additional plain (non-sensitive) environment variables to pass to Terraform Enterprise. Keys must be valid Terraform Enterprise configuration variable names (e.g. 'TFE_CAPACITY_CONCURRENCY'). See https://developer.hashicorp.com/terraform/enterprise/deploy/reference/configuration for the full list. Merged with module-managed variables; caller values take precedence."
+  type        = map(string)
+  default     = {}
+  nullable    = false
 }
 
 variable "tfe_organization" {
@@ -278,7 +310,7 @@ variable "postgres_add_acl_rule" {
 
 variable "existing_redis_hostname" {
   type        = string
-  description = "Hostname of the existing redis instance to integrate with the Terraform Enterprise instance. If set to null a new redis instance is deployed in the cluster. Default to null."
+  description = "Hostname of an existing Redis instance to use. If not set, a new IBM Cloud Databases for Redis instance is provisioned. Default to null."
   default     = null
 }
 
@@ -348,8 +380,8 @@ variable "redis_instance_name" {
 
 variable "redis_version" {
   type        = string
-  description = "Version of Redis to provision. If not specified, the latest version will be used."
-  default     = null
+  description = "Version of Redis to provision. Defaults to '8.2', which is the version tested with Terraform Enterprise. Must be in 'x.y' format (e.g. '7.2', '8.2'). Set to null to use the IBM Cloud preferred default."
+  default     = "8.2"
 }
 
 variable "redis_member_host_flavor" {
@@ -388,6 +420,20 @@ variable "existing_cluster_id" {
   type        = string
   description = "The ID of the existing cluster. If not set, a new cluster will be created."
   default     = null
+}
+
+variable "workers_per_zone" {
+  type        = number
+  description = "Number of worker nodes per zone in the default worker pool. Default is 2. Ignored when var.existing_cluster_id is set."
+  default     = 2
+  nullable    = false
+}
+
+variable "worker_node_flavor" {
+  type        = string
+  description = "The VPC machine type for worker nodes (e.g. 'bx2.4x16', 'bx2.8x32', 'bx2.16x64'). See https://cloud.ibm.com/docs/vpc?topic=vpc-profiles for available profiles. Default is 'bx2.4x16'. Ignored when var.existing_cluster_id is set."
+  default     = "bx2.4x16"
+  nullable    = false
 }
 
 variable "vpc_name" {

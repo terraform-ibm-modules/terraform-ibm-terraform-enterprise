@@ -27,24 +27,24 @@
       "offering_icon_url": "https://cdn.worldvectorlogo.com/logos/terraform-enterprise.svg",
       "features": [
         {
-          "title": "End-to-End automation",
-          "description": "Deploys a complete TFE environment with minimal manual input."
+          "title": "End-to-End Automation",
+          "description": "Deploys a complete Terraform Enterprise environment with minimal manual input."
         },
         {
-          "title": "Cloud Object Storage integration",
-          "description": "Automatically creates and configures a COS instance and bucket for TFE state storage."
+          "title": "Cloud Object Storage Integration",
+          "description": "Automatically creates and configures a COS instance and bucket for Terraform Enterprise state storage."
         },
         {
-          "title": "Secure PostgreSQL backend",
-          "description": "Provisions a managed PostgreSQL instance with service credentials for TFE."
+          "title": "Secure PostgreSQL Backend",
+          "description": "Provisions a managed PostgreSQL instance with service credentials for Terraform Enterprise."
         },
         {
-          "title": "Redis Caching layer",
-          "description": "Deploys Redis for TFE session and queue management."
+          "title": "Redis Caching Layer",
+          "description": "Deploys IBM Cloud Databases for Redis for Terraform Enterprise session and queue management."
         },
         {
-          "title": "OpenShift VPC integration",
-          "description": "Sets up a VPC tailored for OpenShift clusters, supporting TFE deployment."
+          "title": "OpenShift VPC Integration",
+          "description": "Sets up a VPC tailored for OpenShift clusters, supporting Terraform Enterprise deployment."
         },
         {
           "title": "Customizable and reusable",
@@ -196,7 +196,7 @@
                   "type": "image/svg+xml",
                   "thumbnail_url": "https://raw.githubusercontent.com/terraform-ibm-modules/terraform-ibm-terraform-enterprise/main/reference-architectures/diagram-quick-start.svg"
                 },
-                "description": "This architecture automates the deployment of Terraform Enterprise (TFE) on a small 2-node OpenShift cluster, with supporting services and relaxed network settings for full outbound internet access.\n- Custom TFE Agent Image: Built with kubectl, oc, and soon ibmcloud CLI, stored in the OpenShift image registry and backed by a COS bucket.\n- PostgreSQL via ICD: Uses a lightweight, multi-tenant ICD Postgres instance with minimal configuration.\nRedis: Deploys a Redis instance on-cluster, with plans to migrate to ICD Redis.\n- TFE Admin Setup: Automatically configures the default admin account post-deployment."
+                "description": "This architecture automates the deployment of Terraform Enterprise on an OpenShift cluster, with supporting IBM Cloud managed services.\n- Custom Agent Image: A custom Terraform Enterprise agent image with kubectl and oc tooling, stored in the OpenShift image registry backed by a COS bucket.\n- PostgreSQL via ICD: A managed ICD PostgreSQL instance with KMS encryption and private endpoint connectivity.\n- Redis via ICD: A managed ICD Redis instance for session and queue management.\n- Admin Setup: Automatically configures the default admin account post-deployment."
               }
             ]
           },
@@ -254,13 +254,13 @@
               "key": "tfe_image_tag",
               "required": false,
               "virtual": false,
-              "default_value": "2.0.4"
+              "default_value": "2.0.5"
             },
             {
               "key": "tfe_helm_chart_version",
               "required": false,
               "virtual": false,
-              "default_value": "2.0.4"
+              "default_value": "2.0.5"
             },
             {
               "key": "tfe_helm_repository",
@@ -271,7 +271,8 @@
             {
               "key": "redis_version",
               "required": false,
-              "virtual": false
+              "virtual": false,
+              "default_value": "8.2"
             },
             {
               "key": "redis_member_host_flavor",
@@ -313,6 +314,7 @@
             {
               "key": "existing_resource_group_name",
               "display_name": "resource_group",
+              "required": true,
               "custom_config": {
                 "type": "resource_group",
                 "grouping": "deployment",
@@ -320,8 +322,7 @@
                 "config_constraints": {
                   "identifier": "rg_name"
                 }
-              },
-              "default_value": "Default"
+              }
             },
             {
               "key": "tfe_organization_name",
@@ -484,6 +485,76 @@
             },
             {
               "key": "tfe_secondary_hostname_secret_name"
+            },
+            {
+              "key": "tfe_encryption_password",
+              "required": true,
+              "virtual": false
+            },
+            {
+              "key": "tfe_image_repository",
+              "required": false,
+              "virtual": false,
+              "default_value": "images.releases.hashicorp.com/hashicorp/terraform-enterprise"
+            },
+            {
+              "key": "tfe_image_pull_secret_username",
+              "required": false,
+              "virtual": false,
+              "default_value": "terraform"
+            },
+            {
+              "key": "tfe_namespace",
+              "required": false,
+              "virtual": false,
+              "default_value": "tfe"
+            },
+            {
+              "key": "tfe_extra_env_vars",
+              "required": false,
+              "virtual": false,
+              "custom_config": {
+                "type": "code_editor",
+                "grouping": "deployment",
+                "original_grouping": "deployment",
+                "config_constraints": {
+                  "supportedLanguages": [
+                    "hcl"
+                  ]
+                }
+              }
+            },
+            {
+              "key": "workers_per_zone",
+              "required": false,
+              "virtual": false,
+              "default_value": 2
+            },
+            {
+              "key": "worker_node_flavor",
+              "required": false,
+              "virtual": false,
+              "default_value": "bx2.4x16"
+            },
+            {
+              "key": "existing_cluster_id",
+              "required": false,
+              "virtual": false
+            },
+            {
+              "key": "existing_vpc_id",
+              "required": false,
+              "virtual": false
+            },
+            {
+              "key": "postgres_deletion_protection",
+              "required": false,
+              "virtual": false
+            },
+            {
+              "key": "redis_deletion_protection",
+              "required": false,
+              "virtual": false
             }
           ],
           "terraform_version": "1.12.2",

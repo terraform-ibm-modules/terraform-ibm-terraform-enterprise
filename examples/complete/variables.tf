@@ -55,6 +55,46 @@ variable "tfe_license" {
   sensitive   = true
 }
 
+# renovate: datasource=github-releases depName=hashicorp/terraform-enterprise
+variable "tfe_image_tag" {
+  type        = string
+  description = "The version tag of the Terraform Enterprise image to use. Check on https://developer.hashicorp.com/terraform/enterprise/releases for available versions."
+  default     = "2.0.5"
+}
+
+variable "tfe_image_repository" {
+  type        = string
+  description = "The container image registry to pull the Terraform Enterprise image from."
+  default     = "images.releases.hashicorp.com/hashicorp/terraform-enterprise"
+  nullable    = false
+}
+
+variable "tfe_image_pull_secret_username" {
+  type        = string
+  description = "The username used to authenticate with the image registry for the pull secret."
+  default     = "terraform"
+  nullable    = false
+}
+
+# renovate: datasource=helm depName=terraform-enterprise registryUrl=https://helm.releases.hashicorp.com
+variable "tfe_helm_chart_version" {
+  type        = string
+  description = "The version of the Terraform Enterprise Helm chart to use. Check on https://github.com/hashicorp/terraform-enterprise-helm/blob/main/CHANGELOG.md for available versions."
+  default     = "2.0.5"
+}
+
+variable "tfe_helm_repository" {
+  type        = string
+  description = "The Helm repository URL for Terraform Enterprise chart."
+  default     = "https://helm.releases.hashicorp.com"
+}
+
+variable "tfe_encryption_password" {
+  type        = string
+  description = "The encryption password used by Terraform Enterprise to protect sensitive data at rest. Must be kept secret and consistent across upgrades."
+  sensitive   = true
+}
+
 variable "admin_username" {
   type        = string
   description = "The user name of the Terraform Enterprise admin user"
@@ -237,7 +277,7 @@ variable "vpc_acl_rules" {
       type            = null
       code            = null
     },
-    # rules currently needed to pull images for redis into the cluster
+    # rules needed to pull container images from external registries
     {
       name            = "allow-https-outbound-for-images-zone-1"
       action          = "allow"

@@ -16,8 +16,19 @@ resource "kubernetes_namespace_v1" "tfe" {
   }
 }
 
+locals {
+  # Extract the registry hostname (everything before the first "/") from the
+  # image repository so the pull secret targets the correct registry.
+  # e.g. "images.releases.hashicorp.com/hashicorp/terraform-enterprise" → "images.releases.hashicorp.com"
+  # e.g. "cp.icr.io/cp/hashicorp/terraform-enterprise"                  → "cp.icr.io"
+  tfe_registry_hostname = split("/", var.tfe_image_repository)[0]
+}
+
 resource "kubernetes_secret_v1" "tfe_pull_secret" {
-  # This secret is used to pull the Terraform Enterprise image from the registry
+  # This secret is used to pull the Terraform Enterprise image from the registry.
+  # For HashiCorp's registry the username is always "terraform" and the password is the TFE license.
+  # For IBM ICR (cp.icr.io) the username is "iamapikey" and the password is an IBM Cloud API key;
+  # set var.tfe_image_pull_secret_username accordingly when switching registries.
   metadata {
     name      = "terraform-enterprise"
     namespace = kubernetes_namespace_v1.tfe.metadata[0].name
@@ -28,11 +39,10 @@ resource "kubernetes_secret_v1" "tfe_pull_secret" {
   data = {
     ".dockerconfigjson" = jsonencode({
       auths = {
-        "images.releases.hashicorp.com" = {
-          "username" = "terraform"
+        (local.tfe_registry_hostname) = {
+          "username" = var.tfe_image_pull_secret_username
           "password" = var.tfe_license
-          "email"    = "test@example.com"
-          "auth"     = base64encode("terraform:${var.tfe_license}")
+          "auth"     = base64encode("${var.tfe_image_pull_secret_username}:${var.tfe_license}")
         }
       }
     })
@@ -46,6 +56,10 @@ locals {
 
   # building the list of values to configure in the helm release
   set_values_list = [
+    {
+      name  = "image.repository"
+      value = var.tfe_image_repository
+    },
     {
       name  = "image.tag"
       value = var.tfe_image_tag
@@ -240,12 +254,17 @@ locals {
     local.set_values_list_startup_checks
   )
 
-  # Extract environment variables from set_values_list for the values block
-  env_variables = {
-    for item in local.set_values_list_final :
-    replace(item.name, "env.variables.", "") => item.value
-    if startswith(item.name, "env.variables.") && item.name != "env.variables.TFE_REDIS_PORT"
-  }
+  # Extract environment variables from set_values_list for the values block,
+  # then merge any caller-supplied extra env vars (var.tfe_extra_env_vars).
+  # Extra vars are applied last so they can override or extend the defaults.
+  env_variables = merge(
+    {
+      for item in local.set_values_list_final :
+      replace(item.name, "env.variables.", "") => item.value
+      if startswith(item.name, "env.variables.") && item.name != "env.variables.TFE_REDIS_PORT"
+    },
+    var.tfe_extra_env_vars
+  )
 
   # building the list of sensitive values
   set_sensitive_values_list = [
@@ -305,6 +324,11 @@ locals {
 locals {
   tfe_deployment_labels      = {}
   tfe_deployment_annotations = {}
+
+  tfe_deployment_values = {
+    "labels"      = local.tfe_deployment_labels
+    "annotations" = local.tfe_deployment_annotations
+  }
 
   tfe_service_values = {
     "annotations" : {
@@ -392,11 +416,7 @@ resource "helm_release" "tfe_install" {
         },
         "rbac" = local.tfe_agents_rbac
       }
-      "deployment" = {
-        "labels"      = local.tfe_deployment_labels,
-        "annotations" = local.tfe_deployment_annotations
-      },
-      "adminHttpsPort" = null,
+      "deployment" = local.tfe_deployment_values,
       # IBM Cloud Redis uses one-way TLS — only a CA cert is needed to verify the
       # server. Setting tls.caCertData adds the cert to TFE's global CA bundle
       # (TFE_TLS_CA_BUNDLE_FILE) so it trusts the Redis server certificate.
@@ -474,6 +494,36 @@ resource "kubernetes_role_binding_v1" "tfe_admin" {
     name      = "tfe"
     namespace = var.namespace
   }
+}
+
+# The OCP router's external LB IP is unreachable from within the cluster (hairpin).
+# Inject a hostAliases entry pointing the TFE hostname to the internal router
+# ClusterIP so that TFE agents can reach the TFE API without leaving the cluster.
+data "kubernetes_service_v1" "router_internal" {
+  metadata {
+    name      = "router-internal-default"
+    namespace = "openshift-ingress"
+  }
+}
+
+resource "kubectl_manifest" "tfe_host_alias_patch" {
+  depends_on        = [helm_release.tfe_install]
+  yaml_body         = <<-YAML
+    apiVersion: apps/v1
+    kind: Deployment
+    metadata:
+      name: terraform-enterprise
+      namespace: ${kubernetes_namespace_v1.tfe.metadata[0].name}
+    spec:
+      template:
+        spec:
+          hostAliases:
+            - ip: "${data.kubernetes_service_v1.router_internal.spec[0].cluster_ip}"
+              hostnames:
+                - "${local.tfe_hostname}"
+  YAML
+  force_conflicts   = true
+  server_side_apply = true
 }
 
 resource "kubectl_manifest" "tfe_route" {

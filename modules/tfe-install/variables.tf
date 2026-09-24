@@ -16,6 +16,13 @@ variable "namespace" {
   description = "The namespace to deploy Terraform Enterprise to. This namespace will be created if it does not exist."
   type        = string
   default     = "tfe"
+
+  validation {
+    # The OCP route hostname label is built as "tfe-<namespace>.<ingress-domain>".
+    # DNS labels must be ≤ 63 characters; "tfe-" consumes 4, leaving 59 for the namespace.
+    condition     = length(var.namespace) <= 59
+    error_message = "var.namespace must be 59 characters or fewer. The OCP route hostname is constructed as 'tfe-<namespace>.<ingress-domain>' and DNS labels must not exceed 63 characters."
+  }
 }
 
 #################################################################################
@@ -71,16 +78,30 @@ variable "tfe_license" {
 
 # renovate: datasource=github-releases depName=hashicorp/terraform-enterprise
 variable "tfe_image_tag" {
-  description = "The version tag of the Terraform Enterprise image to use (e.g., '2.0.4'). See https://developer.hashicorp.com/terraform/enterprise/releases for available versions."
+  description = "The version tag of the Terraform Enterprise image to use. Check on https://developer.hashicorp.com/terraform/enterprise/releases for available versions."
   type        = string
-  default     = "2.0.4"
+  default     = "2.0.5"
+}
+
+variable "tfe_image_repository" {
+  description = "The container image registry to pull the Terraform Enterprise image from. Defaults to HashiCorp's official registry ('images.releases.hashicorp.com/hashicorp/terraform-enterprise'). For IBM Passport Advantage customers, set to 'cp.icr.io/cp/hashicorp/terraform-enterprise' and provide a corresponding entitlement key as the pull secret password."
+  type        = string
+  default     = "images.releases.hashicorp.com/hashicorp/terraform-enterprise"
+  nullable    = false
+}
+
+variable "tfe_image_pull_secret_username" {
+  description = "The username used to authenticate with the image registry for the pull secret. For HashiCorp's official registry this is always 'terraform'. For IBM Cloud Container Registry (cp.icr.io) set this to 'iamapikey' and set var.tfe_license to the IBM Cloud API key that has entitlement to pull the image."
+  type        = string
+  default     = "terraform"
+  nullable    = false
 }
 
 # renovate: datasource=helm depName=terraform-enterprise registryUrl=https://helm.releases.hashicorp.com
 variable "tfe_helm_chart_version" {
-  description = "The version of the Terraform Enterprise Helm chart to use (e.g., '2.0.4'). See https://github.com/hashicorp/terraform-enterprise-helm/blob/main/CHANGELOG.md for available versions."
+  description = "The version of the Terraform Enterprise Helm chart to use. Check on https://github.com/hashicorp/terraform-enterprise-helm/blob/main/CHANGELOG.md for available versions."
   type        = string
-  default     = "2.0.4"
+  default     = "2.0.5"
 }
 
 variable "tfe_helm_repository" {
@@ -96,7 +117,6 @@ variable "tfe_helm_repository" {
 variable "tfe_encryption_password" {
   description = "The encryption password for Terraform Enterprise"
   type        = string
-  default     = "vincent"
   sensitive   = true
 }
 
@@ -125,13 +145,11 @@ variable "tfe_database_name" {
 variable "tfe_s3_bucket" {
   description = "The S3 bucket name for Terraform Enterprise object storage"
   type        = string
-  default     = "tfe-bucket-vincent"
 }
 
 variable "tfe_s3_region" {
   description = "The region for the S3 bucket"
   type        = string
-  default     = "eu-es"
 }
 
 variable "tfe_s3_access_key" {
@@ -149,7 +167,6 @@ variable "tfe_s3_secret_key" {
 variable "tfe_s3_endpoint" {
   description = "The endpoint for S3 object storage"
   type        = string
-  default     = "s3.eu-es.cloud-object-storage.appdomain.cloud"
 }
 
 variable "tfe_redis_host" {
@@ -267,6 +284,13 @@ variable "tfe_resources_configuration_cpu" {
   description = "TFE deployment resource configuration for the CPU. Default to 1."
   type        = string
   default     = "1"
+}
+
+variable "tfe_extra_env_vars" {
+  description = "Additional environment variables to pass to the Terraform Enterprise deployment as plain (non-sensitive) values. Keys must be valid Terraform Enterprise configuration variable names (e.g. 'TFE_CAPACITY_CONCURRENCY'). See https://developer.hashicorp.com/terraform/enterprise/deploy/reference/configuration for the full list. These are merged with the module-managed variables and can override defaults."
+  type        = map(string)
+  default     = {}
+  nullable    = false
 }
 
 variable "rollback_on_failure" {
