@@ -4,7 +4,7 @@
 
 module "icd_redis" {
   source             = "terraform-ibm-modules/icd-redis/ibm"
-  version            = "2.10.12"
+  version            = "2.14.2"
   resource_group_id  = var.resource_group_id
   name               = var.redis_instance_name
   region             = var.region
