@@ -10,13 +10,15 @@
 
 ## Overview
 
-This repository provides a top-level Terraform module for deploying and managing HashiCorp Terraform Enterprise (TFE) on IBM Cloud Red Hat OpenShift clusters. The module automates the setup of namespaces, secrets, Helm releases, OpenShift routes, and supporting resources required for a TFE installation.
+This module deploys Terraform Enterprise on IBM Cloud, provisioning all required supporting infrastructure — VPC, Red Hat OpenShift cluster, Cloud Object Storage, IBM Cloud Databases for PostgreSQL and Redis — and installs Terraform Enterprise via its official Helm chart.
 
-**Status:** This module deploys a functional TFE infrastructure on IBM Cloud. However, it does not yet implement all production-ready requirements such as network isolation, security hardening, and compliance controls. The module interfaces and behaviors may change as these capabilities are added. Early adopters are encouraged to try it and provide feedback.
+> **Status:** This module does not yet implement all production-ready requirements such as network isolation, security hardening, and compliance controls. The module interfaces and behaviours may change as these capabilities are added. Early adopters are encouraged to try it and provide feedback.
 
-### TFE Secondary hostname
+This module automates the setup of namespaces, secrets, Helm releases, OpenShift routes, and supporting resources required for a Terraform Enterprise installation.
 
-This module supports to configure the TFE instance with a [secondary hostname](https://developer.hashicorp.com/terraform/enterprise/deploy/reference/configuration#tfe_hostname_secondary) by:
+### Terraform Enterprise Secondary hostname
+
+This module supports configuring the Terraform Enterprise instance with a [secondary hostname](https://developer.hashicorp.com/terraform/enterprise/deploy/reference/configuration#tfe_hostname_secondary) by:
 - integrating it with an existing IBM Cloud Internet Services instance providing an already configured domain (i.e. `example.com`) for the DNS support
 - providing the host to add to the existing domain DNS configuration (i.e. `tfe-host`) and to configure the route for the final secondary Fully Qualified Domain Name (FQDN) on the OCP cluster (i.e. `tfe-host.example.com`)
 - integrating it with an existing secret on IBM Secrets Manager instance to pull the TLS certificate to configure for the OpenShift route that serves the secondary FQDN.
@@ -60,7 +62,48 @@ module "terraform_enterprise" {
 }
 ```
 
-**Important:** Ensure the Helm chart version is compatible with your TFE image tag (`tfe_image_tag`). Refer to the [HashiCorp Terraform Enterprise documentation](https://developer.hashicorp.com/terraform/enterprise/flexible-deployments/install/kubernetes/install) for compatibility information.
+**Important:** Ensure the Helm chart version is compatible with your image tag (`tfe_image_tag`). Refer to the [HashiCorp Terraform Enterprise documentation](https://developer.hashicorp.com/terraform/enterprise/flexible-deployments/install/kubernetes/install) for compatibility information.
+
+## Deployed resource naming
+
+All resources created by this module are named using the `prefix` variable. Setting `prefix = "prod"` produces names such as:
+
+| Resource | Name |
+|---|---|
+| VPC | `prod-vpc` |
+| OpenShift cluster | `prod-cluster` |
+| Key Protect instance | `prod-kms` |
+| Cloud Object Storage instance | `prod-cos` |
+| COS bucket | `prod-cos-bucket-<suffix>` |
+| PostgreSQL instance | `prod-data-store` |
+| Redis instance | `prod-redis` |
+| Secrets Manager secret group | `prod-secrets-group` |
+
+Set `prefix = null` or `prefix = ""` to skip prefixing entirely and use the names as-is.
+
+## Upgrade guide
+
+To upgrade Terraform Enterprise to a new version:
+
+1. Check the [Terraform Enterprise release notes](https://developer.hashicorp.com/terraform/enterprise/releases) and the [Helm chart changelog](https://github.com/hashicorp/terraform-enterprise-helm/blob/main/CHANGELOG.md) for the target version.
+2. Update `tfe_image_tag` to the new image version (e.g. `"2.0.5"`).
+3. Update `tfe_helm_chart_version` to the corresponding Helm chart version (e.g. `"2.0.5"`).
+4. Run `terraform plan` and review the diff — expect a Helm release update only.
+5. Run `terraform apply`. The Helm chart performs a rolling update; existing runs continue until pods are replaced.
+
+> **Important:** Never skip major versions. Follow HashiCorp's [upgrade path guidance](https://developer.hashicorp.com/terraform/enterprise/flexible-deployments/install/kubernetes/upgrade).
+
+## Backup strategy
+
+Terraform Enterprise state and data is stored across three IBM Cloud managed services:
+
+| Service | What it holds | IBM backup policy |
+|---|---|---|
+| **IBM Cloud Databases for PostgreSQL** | Runs, workspaces, organisations, variables | Automatic daily backups retained for 30 days |
+| **Cloud Object Storage** | Terraform state files and artefacts | Versioning available; configure retention policies via `cos_retention_*` variables |
+| **IBM Cloud Databases for Redis** | Session data and transient queue data | Automatic daily backups retained for 30 days |
+
+For disaster recovery, restore PostgreSQL first, then COS, then restart Terraform Enterprise pods. Refer to the [IBM Cloud Databases restore documentation](https://cloud.ibm.com/docs/databases-for-postgresql?topic=databases-for-postgresql-dashboard-backups) for step-by-step instructions.
 
 ## Notes
 

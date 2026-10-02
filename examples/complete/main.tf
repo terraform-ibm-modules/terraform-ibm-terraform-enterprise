@@ -65,6 +65,12 @@ module "tfe" {
   cos_instance_name                        = "${local.prefix}cos"
   cos_bucket_name                          = "${local.prefix}cos-bucket"
   tfe_license                              = var.tfe_license
+  tfe_encryption_password                  = var.tfe_encryption_password
+  tfe_image_tag                            = var.tfe_image_tag
+  tfe_image_repository                     = var.tfe_image_repository
+  tfe_image_pull_secret_username           = var.tfe_image_pull_secret_username
+  tfe_helm_chart_version                   = var.tfe_helm_chart_version
+  tfe_helm_repository                      = var.tfe_helm_repository
   tfe_license_secret_crn                   = var.tfe_license_secret_crn
   admin_username                           = var.admin_username
   admin_password                           = var.admin_password

@@ -139,3 +139,17 @@ variable "cluster_name" {
     error_message = "var.existing_cluster_id and var.cluster_name cannot be both null."
   }
 }
+
+variable "workers_per_zone" {
+  type        = number
+  description = "Number of worker nodes to provision per zone in the default worker pool. Increase this value for higher availability or heavier workloads. Default is 2."
+  default     = 2
+  nullable    = false
+}
+
+variable "worker_node_flavor" {
+  type        = string
+  description = "The VPC machine type (flavor) for worker nodes in the default pool (e.g. 'bx2.4x16', 'bx2.8x32', 'bx2.16x64'). See https://cloud.ibm.com/docs/vpc?topic=vpc-profiles for available profiles. Default is 'bx2.4x16' (4 vCPU, 16 GB RAM)."
+  default     = "bx2.4x16"
+  nullable    = false
+}

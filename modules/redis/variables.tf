@@ -19,8 +19,8 @@ variable "region" {
 
 variable "redis_version" {
   type        = string
-  description = "Version of Redis to provision"
-  default     = null
+  description = "Version of Redis to provision. Defaults to '8.2', which is the version tested with Terraform Enterprise. Must be in 'x.y' format (e.g. '7.2', '8.2'). Set to null to use the IBM Cloud preferred default."
+  default     = "8.2"
 }
 
 variable "redis_member_host_flavor" {

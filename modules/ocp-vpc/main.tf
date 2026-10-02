@@ -2,6 +2,19 @@
 # VPC
 ########################################################################################################################
 
+# When reusing an existing VPC, look up its subnets so we can pass them to
+# module.vpc as existing_subnets (no new subnets / prefixes / gateways created).
+data "ibm_is_subnets" "existing" {
+  count = var.existing_vpc_id != null ? 1 : 0
+  vpc   = var.existing_vpc_id
+}
+
+locals {
+  existing_subnet_ids = var.existing_vpc_id != null ? [
+    for s in data.ibm_is_subnets.existing[0].subnets : { id = s.id }
+  ] : []
+}
+
 module "vpc" {
   source            = "terraform-ibm-modules/landing-zone-vpc/ibm"
   version           = "9.1.2"
@@ -10,13 +23,22 @@ module "vpc" {
   create_vpc        = var.existing_vpc_id == null ? true : false
   existing_vpc_id   = var.existing_vpc_id
   name              = var.vpc_name
-  resource_tags     = []
-  address_prefixes = {
+  resource_tags     = var.resource_tags
+
+  # When reusing an existing VPC, skip all subnet/prefix/gateway/ACL creation.
+  create_subnets   = var.existing_vpc_id == null ? true : false
+  existing_subnets = local.existing_subnet_ids
+  address_prefixes = var.existing_vpc_id == null ? {
     for zone, cidr in var.subnets_zones_cidr :
     zone => [cidr]
-  }
+  } : null
+  use_public_gateways = var.existing_vpc_id == null ? {
+    for zone, cidr in var.subnets_zones_cidr :
+    zone => true
+  } : {}
+
   clean_default_sg_acl = true
-  network_acls = [
+  network_acls = var.existing_vpc_id == null ? [
     {
       name                         = "vpc-acl"
       add_ibm_cloud_internal_rules = true
@@ -24,13 +46,11 @@ module "vpc" {
       prepend_ibm_rules            = true
       rules                        = var.vpc_acl_rules
     }
-  ]
+  ] : []
   enable_vpc_flow_logs                   = false
   create_authorization_policy_vpc_to_cos = false
-  #existing_storage_bucket_name           = module.flowlogs_bucket.bucket_configs[0].bucket_name
-  security_group_rules = []
-  #existing_cos_instance_guid             = module.cos_fscloud.cos_instance_guid
-  subnets = {
+  security_group_rules                   = []
+  subnets = var.existing_vpc_id == null ? {
     for zone, cidr in var.subnets_zones_cidr :
     zone => [
       {
@@ -40,10 +60,10 @@ module "vpc" {
         public_gateway = true
       }
     ]
-  }
-  use_public_gateways = {
-    for zone, cidr in var.subnets_zones_cidr :
-    zone => true
+    } : {
+    # Placeholder to satisfy the schema's zone-1 requirement when
+    # create_subnets = false — these values are never used by the module.
+    zone-1 = []
   }
 }
 
@@ -66,9 +86,9 @@ locals {
   worker_pools = [
     {
       subnet_prefix                     = "default"
-      pool_name                         = "default"  # ibm_container_vpc_cluster automatically names default pool "default" (See https://github.com/IBM-Cloud/terraform-provider-ibm/issues/2849)
-      machine_type                      = "bx2.4x16" # smallest machine type available in VPC
-      workers_per_zone                  = 2
+      pool_name                         = "default" # ibm_container_vpc_cluster automatically names default pool "default" (See https://github.com/IBM-Cloud/terraform-provider-ibm/issues/2849)
+      machine_type                      = var.worker_node_flavor
+      workers_per_zone                  = var.workers_per_zone
       operating_system                  = "RHCOS"
       labels                            = {}
       resource_group_id                 = var.resource_group_id
@@ -111,16 +131,27 @@ locals {
 }
 
 locals {
-  cluster_security_group = [for group in data.ibm_is_security_groups.vpc_security_groups.security_groups : group if group.name == "kube-${local.cluster_id}"][0]
+  matching_cluster_security_groups = [
+    for group in data.ibm_is_security_groups.vpc_security_groups.security_groups :
+    group if group.name == "kube-${local.cluster_id}"
+  ]
 }
 
 data "ibm_is_security_groups" "vpc_security_groups" {
-  vpc_id = var.existing_cluster_id != null ? module.vpc.id : module.openshift[0].vpc_id
+  depends_on = [module.openshift]
+  vpc_id     = local.vpc_id
 }
 
-# Kube-<vpc id> Security Group
+# Kube-<cluster id> Security Group
 data "ibm_is_security_group" "kube_cluster_sg" {
-  name = local.cluster_security_group.name
+  name = local.matching_cluster_security_groups[0].name
+
+  lifecycle {
+    precondition {
+      condition     = length(local.matching_cluster_security_groups) > 0
+      error_message = "Expected security group 'kube-${local.cluster_id}' was not found in VPC ${local.vpc_id}. Ensure the cluster has finished provisioning before this data source is evaluated."
+    }
+  }
 }
 
 data "ibm_is_vpc" "vpc" {
