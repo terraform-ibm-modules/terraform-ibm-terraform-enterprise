@@ -8,7 +8,7 @@ locals {
 
 module "key_protect_all_inclusive" {
   source                    = "terraform-ibm-modules/kms-all-inclusive/ibm"
-  version                   = "5.6.5"
+  version                   = "5.6.11"
   resource_group_id         = var.resource_group_id
   key_protect_instance_name = var.kms_instance_name
   region                    = var.region
@@ -64,7 +64,7 @@ locals {
 
 module "cos" {
   source                   = "terraform-ibm-modules/cos/ibm"
-  version                  = "10.17.5"
+  version                  = "11.0.0"
   resource_group_id        = var.resource_group_id
   region                   = var.region
   create_cos_instance      = var.existing_cos_instance_id != null ? false : true
@@ -118,7 +118,7 @@ module "ocp_vpc" {
 
 module "icd_postgres" {
   source                       = "terraform-ibm-modules/icd-postgresql/ibm"
-  version                      = "4.15.2"
+  version                      = "5.1.0"
   resource_group_id            = var.resource_group_id
   name                         = var.postgres_instance_name
   postgresql_version           = "16" # TFE supports up to Postgres 16 (not 17)
@@ -244,7 +244,7 @@ module "icd_postgres_vpe" {
   depends_on = [time_sleep.wait_before_creating_vpe]
   count      = var.postgres_vpe_enabled ? 1 : 0
   source     = "terraform-ibm-modules/vpe-gateway/ibm"
-  version    = "5.3.5"
+  version    = "5.5.1"
   region     = var.region
   cloud_service_by_crn = [
     {
@@ -432,7 +432,7 @@ module "existing_secrets_manager_crn" {
 module "secrets_manager_secret_group" {
   count                    = var.existing_secrets_manager_crn != null && var.existing_secrets_manager_secret_group_id == null ? 1 : 0
   source                   = "terraform-ibm-modules/secrets-manager-secret-group/ibm"
-  version                  = "1.5.4"
+  version                  = "1.5.8"
   secret_group_name        = var.secrets_manager_secret_group_name
   secret_group_description = "Secret group for storing secrets created by the Terraform Enterprise Deployable Architecture."
   secrets_manager_guid     = module.existing_secrets_manager_crn[0].service_instance
@@ -476,7 +476,7 @@ data "ibm_cis_domain" "existing_cis_instance_domain" {
 module "tfe_dns_record" {
   count           = var.existing_cis_instance_name != null && var.existing_cis_instance_domain != null && var.create_tfe_secondary_host_on_cis ? 1 : 0
   source          = "terraform-ibm-modules/cis/ibm//modules/dns"
-  version         = "2.4.1"
+  version         = "2.4.2"
   cis_instance_id = data.ibm_cis.existing_cis_instance[0].id
   domain_id       = data.ibm_cis_domain.existing_cis_instance_domain[0].domain_id
   dns_record_set = [
