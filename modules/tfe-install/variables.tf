@@ -254,7 +254,7 @@ variable "tfe_service_secondary_admin_node_port" {
 variable "tfe_deployment_replicas" {
   description = "TFE deployment replicas. Default to 3."
   type        = number
-  default     = 3
+  default     = 1
 }
 
 variable "tfe_resources_configuration_memory" {
