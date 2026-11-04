@@ -28,8 +28,8 @@ module "icd_redis" {
   ]
 
   # Resource tags
-  tags        = var.resource_tags
-  access_tags = var.access_tags
+  resource_tags = var.resource_tags
+  access_tags   = var.access_tags
 
   # Deletion protection
   deletion_protection = var.redis_deletion_protection
