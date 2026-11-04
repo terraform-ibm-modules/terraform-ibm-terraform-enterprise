@@ -4,7 +4,7 @@
 
 module "icd_redis" {
   source             = "terraform-ibm-modules/icd-redis/ibm"
-  version            = "2.10.12"
+  version            = "3.2.2"
   resource_group_id  = var.resource_group_id
   name               = var.redis_instance_name
   region             = var.region
@@ -28,8 +28,8 @@ module "icd_redis" {
   ]
 
   # Resource tags
-  tags        = var.resource_tags
-  access_tags = var.access_tags
+  resource_tags = var.resource_tags
+  access_tags   = var.access_tags
 
   # Deletion protection
   deletion_protection = var.redis_deletion_protection
